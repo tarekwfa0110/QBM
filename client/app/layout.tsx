@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import QueryProvider from "@/providers/QueryProvider";
+import Link from "next/link";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -27,6 +28,16 @@ export default function RootLayout({
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
       <body className="antialiased">
         <QueryProvider>
+          <nav className="bg-gray-800 p-4">
+            <ul className="flex space-x-4">
+              <li>
+                <Link href="/" className="text-white hover:text-gray-300">Home</Link>
+              </li>
+            <li>
+                <Link href="/questions" className="text-white hover:text-gray-300">Questions</Link>
+              </li>
+            </ul>
+          </nav>
           {children}
         </QueryProvider>
       </body>
