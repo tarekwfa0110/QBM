@@ -1,19 +1,26 @@
-
-import mongoose from "mongoose";
-import dotenv from "dotenv";
+import express from 'express';
+import cors from 'cors';
+import mongoose from 'mongoose';
+import dotenv from 'dotenv';
+import uploadRouter from './routes/upload.js';
+import questionsRouter from './routes/questions.js';
 
 dotenv.config();
 
-async function testConnection() {
-    try {
-        await mongoose.connect(process.env.MONGODB_URI);   
-        console.log("✅ Connected to MongoDB");
-        console.log("Database name:", mongoose.connection.db?.databaseName);
-        await mongoose.disconnect();
-    } catch (error) {
-        console.error("❌ Connection failed:", error);
-        process.exit(1);
-    }
-}
+const app = express();
+app.use(cors());
+app.use(express.json());
 
-testConnection();
+
+mongoose.connect(process.env.MONGODB_URI)
+    .then(() => console.log('✅ Connected to MongoDB'))
+    .catch(err => console.error('❌ MongoDB connection error:', err));
+
+
+app.use('/api', uploadRouter);
+app.use('/api', questionsRouter);
+
+const PORT = process.env.PORT || 3001;
+app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+});
