@@ -8,15 +8,17 @@ import questionsRouter from './routes/questions.js';
 dotenv.config();
 
 const app = express();
+
+// Middleware
 app.use(cors());
 app.use(express.json());
 
-
-mongoose.connect(process.env.MONGODB_URI)
+// Connect to MongoDB
+mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/qbm')
     .then(() => console.log('✅ Connected to MongoDB'))
     .catch(err => console.error('❌ MongoDB connection error:', err));
 
-
+// Routes
 app.use('/api', uploadRouter);
 app.use('/api', questionsRouter);
 

@@ -14,8 +14,7 @@ export default function FileUpload() {
         mutationFn: async (file: File) => {
             const formData = new FormData()
             formData.append("pdf", file)
-            
-            // Hardcoded API endpoint
+
             const response = await fetch("http://localhost:3001/api/upload", {
                 method: "POST",
                 body: formData,
@@ -59,9 +58,8 @@ export default function FileUpload() {
     }
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const files = e.target.files
-        if (files && files[0]) {
-            handleFiles(files)
+        if (e.target.files && e.target.files[0]) {
+            handleFiles(e.target.files)
         }
     }
 
@@ -107,12 +105,12 @@ export default function FileUpload() {
                     onDragOver={handleDrag}
                     onDrop={handleDrop}
                 >
-                    <input 
-                        id="file-upload" 
-                        ref={inputRef} 
-                        type="file" 
-                        className="hidden" 
-                        onChange={handleChange} 
+                    <input
+                        id="file-upload"
+                        ref={inputRef}
+                        type="file"
+                        className="hidden"
+                        onChange={handleChange}
                         accept=".pdf"
                         disabled={isPending}
                     />

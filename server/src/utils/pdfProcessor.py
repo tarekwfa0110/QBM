@@ -1,86 +1,73 @@
-import PyPDF2
-import re
-import json
 import sys
+import json
+import re
+import os
 import logging
+import fitz
+import pytesseract
+from pdf2image import convert_from_path
 
-# Set up logging
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+# Paths for both Poppler and Tesseract
+POPPLER_PATH = r"C:\Users\Dell\Downloads\poppler-24.08.0\Library\bin"
+TESSERACT_PATH = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+
+# Set Tesseract path
+pytesseract.pytesseract.tesseract_cmd = TESSERACT_PATH
 
 def extract_text_from_pdf(pdf_path):
-    """Extract text from a PDF file."""
+    """Extract text using both PDF text extraction and OCR"""
     try:
-        reader = PyPDF2.PdfReader(pdf_path)
+        # Try normal PDF text extraction first
+        doc = fitz.open(pdf_path)
         text = ""
-        for page in reader.pages:
-            text += page.extract_text()
+        for page in doc:
+            text += page.get_text("text", sort=True) + "\n"
+        
+        # If no text found, use OCR
+        if not text.strip():
+            logger.info("No text found in PDF, trying OCR...")
+            images = convert_from_path(pdf_path, poppler_path=POPPLER_PATH)
+            text = ""
+            for img in images:
+                text += pytesseract.image_to_string(img) + "\n"
+        
         return text
     except Exception as e:
-        logging.error(f"Error reading PDF: {e}")
+        logger.error(f"Error extracting text: {e}")
         raise
 
-def extract_answers(answers_text):
-    """Extract answers from the answers section."""
-    answers = {}
-    answer_pattern = r"(\d+)\.\s*([a-d])\)"
-    answer_matches = re.finditer(answer_pattern, answers_text, re.IGNORECASE)
-    for match in answer_matches:
-        q_num, ans = match.groups()
-        answers[q_num] = ans.lower()
-    return answers
-
-def extract_questions(questions_text):
-    """Extract questions and options from the questions section."""
-    questions = []
-    question_pattern = r"Question\s*(\d+)[.\s]*(.*?)(?=Question\s*\d+|$)"
-    q_matches = re.finditer(question_pattern, questions_text, re.MULTILINE | re.DOTALL)
-    
-    for match in q_matches:
-        q_num, q_text = match.groups()
-        q_parts = q_text.strip().split('\n')
-        
-        # Extract options
-        options = []
-        for line in q_parts[1:]:
-            if line.strip().startswith(('a)', 'b)', 'c)', 'd)')):
-                options.append(line.strip())
-        
-        questions.append({
-            "question": q_parts[0].strip(),
-            "options": options,
-            "question_number": q_num  # Add question number for reference
-        })
-    
-    return questions
-
 def process_pdf(pdf_path):
-    """Process the PDF and extract questions and answers."""
+    """Main function to process PDF and extract Q&A"""
     try:
+        logger.info(f"Processing PDF: {pdf_path}")
         text = extract_text_from_pdf(pdf_path)
+        logger.info(f"Extracted text length: {len(text)}")
         
-        # Split into questions and answers sections
-        sections = text.split("Answers")
-        questions_text = sections[0]
-        answers_text = sections[1] if len(sections) > 1 else ""
+        # For testing, return a sample question
+        questions = [{
+            "question": "Sample Question",
+            "options": ["A) Option 1", "B) Option 2", "C) Option 3", "D) Option 4"],
+            "answer": "A) Option 1",
+            "pdfSource": os.path.basename(pdf_path)
+        }]
         
-        # Extract answers and questions
-        answers = extract_answers(answers_text)
-        questions = extract_questions(questions_text)
+        print(json.dumps(questions))
+        return json.dumps(questions)
         
-        # Combine questions with their answers
-        for q in questions:
-            q["answer"] = answers.get(q["question_number"], "")
-            q["pdfSource"] = pdf_path
-        
-        return json.dumps(questions, indent=2)
     except Exception as e:
-        logging.error(f"Error processing PDF: {e}")
-        return json.dumps({"error": str(e)})
+        error = {"error": str(e)}
+        print(json.dumps(error))
+        return json.dumps(error)
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
-        print("Usage: python pdfProcessor.py <pdf_path>")
+        print(json.dumps({"error": "PDF path required"}))
         sys.exit(1)
-    
-    result = process_pdf(sys.argv[1])
-    print(result)
+    process_pdf(sys.argv[1])
